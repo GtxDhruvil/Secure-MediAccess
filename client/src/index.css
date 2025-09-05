@@ -1,0 +1,358 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+input[type="date"]:not(:focus)::-webkit-datetime-edit {
+    color: #6b7280; 
+}
+
+
+/* Custom base styles */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+  
+  * {
+    @apply border-gray-200;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-gray-700 font-medium py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-soft border border-gray-100 p-6;
+  }
+  
+  .input-field {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+  
+  .form-error {
+    @apply mt-1 text-sm text-red-600 flex items-center;
+  }
+}
+
+/* Custom utility styles */
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+  }
+  
+  .shadow-glow {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  
+  .backdrop-blur {
+    backdrop-filter: blur(8px);
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
+
+/* Loading animations */
+.loading-spinner {
+  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
+}
+
+.loading-dots {
+  @apply flex space-x-1;
+}
+
+.loading-dots > div {
+  @apply w-2 h-2 bg-gray-400 rounded-full animate-bounce;
+}
+
+.loading-dots > div:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.loading-dots > div:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+/* Fade in animation */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide animations */
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale animation */
+.scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse animation for notifications */
+.pulse-gentle {
+  animation: pulseGentle 2s infinite;
+}
+
+@keyframes pulseGentle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Focus styles for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Responsive text utilities */
+.text-responsive {
+  @apply text-sm sm:text-base lg:text-lg;
+}
+
+.text-responsive-xl {
+  @apply text-lg sm:text-xl lg:text-2xl;
+}
+
+.text-responsive-2xl {
+  @apply text-xl sm:text-2xl lg:text-3xl;
+}
+
+/* Glass morphism effect */
+.glass {
+  @apply bg-white/80 backdrop-blur border border-white/20 shadow-soft;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+  @apply bg-gradient-to-r from-blue-600 to-purple-600;
+}
+
+.bg-gradient-secondary {
+  @apply bg-gradient-to-r from-purple-600 to-pink-600;
+}
+
+.bg-gradient-success {
+  @apply bg-gradient-to-r from-green-600 to-emerald-600;
+}
+
+.bg-gradient-warning {
+  @apply bg-gradient-to-r from-yellow-600 to-orange-600;
+}
+
+.bg-gradient-danger {
+  @apply bg-gradient-to-r from-red-600 to-pink-600;
+}
+
+/* Modal animations */
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+/* Date picker fix for dark mode */
+.date-picker-fix::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.date-picker-fix {
+  color-scheme: dark;
+}
+
+/* Text glow for status badges */
+.text-glow-green {
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+}
+
+.text-glow-red {
+  text-shadow: 0 0 8px rgba(251, 113, 133, 0.8);
+}
+
+.text-glow-yellow {
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.8);
+}
+
+/* Box glow for dashboard cards */
+.card-glow {
+  box-shadow: 0 0 15px rgba(79, 70, 229, 0.4), 0 0 5px rgba(79, 70, 229, 0.2);
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.card-glow:hover {
+  box-shadow: 0 0 25px rgba(79, 70, 229, 0.6), 0 0 10px rgba(79, 70, 229, 0.4);
+}
+
+/* White text glow for header */
+.text-glow-white {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+}
+
+html, body {
+  height: 100%;
+  background: transparent;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+.star-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+    overflow: hidden;
+}
+
+#stars {
+  width: 1px;
+  height: 1px;
+  background: transparent;
+  box-shadow: 1909px 1269px #FFF, 1225px 1773px #FFF, 185px 1759px #FFF, 1238px 108px #FFF, 1018px 116px #FFF, 1530px 1038px #FFF, 1907px 1588px #FFF, 1379px 1287px #FFF, 1431px 193px #FFF, 246px 141px #FFF, 1806px 1004px #FFF, 1319px 1040px #FFF, 1368px 1275px #FFF, 1409px 1338px #FFF, 1383px 142px #FFF, 1513px 1569px #FFF, 1668px 1335px #FFF, 1531px 119px #FFF, 1889px 1686px #FFF, 1146px 135px #FFF;
+  animation: animStar 50s linear infinite;
+}
+
+#stars2 {
+  width: 2px;
+  height: 2px;
+  background: transparent;
+  box-shadow: 1603px 1032px #FFF, 102px 133px #FFF, 143px 113px #FFF, 1130px 183px #FFF, 183px 183px #FFF, 138px 183px #FFF, 183px 183px #FFF, 183px 183px #FFF, 183px 183px #FFF, 183px 183px #FFF;
+  animation: animStar 100s linear infinite;
+}
+
+#stars3 {
+  width: 3px;
+  height: 3px;
+  background: transparent;
+  box-shadow: 1048px 1331px #FFF, 1503px 123px #FFF, 123px 123px #FFF, 123px 123px #FFF, 123px 123px #FFF, 123px 123px #FFF, 123px 123px #FFF, 123px 123px #FFF, 123px 123px #FFF, 123px 123px #FFF;
+  animation: animStar 150s linear infinite;
+}
+
+@keyframes animStar {
+  from { transform: translateY(0px); }
+  to { transform: translateY(2000px); }
+}
+
+
+
+
+
