@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -6,7 +7,6 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const path = require('path');
-require('dotenv').config();
 
 const { logger } = require('./utils/logger');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -24,6 +24,26 @@ const PORT = process.env.PORT || 5000;
 
 // Database connection
 const { sequelize } = require('./config/database');
+
+const allowedOrigins = [
+  process.env.CLIENT_URL,       // deployed frontend
+  'http://localhost:3000'       // local dev
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+app.options('*', cors());
 
 // Security middleware
 app.use(helmet({
@@ -47,23 +67,6 @@ app.use(helmet({
 
 // CORS configuration
 
-const allowedOrigins = [
-  process.env.CLIENT_URL,      
-  'http://localhost:3000'      // for local dev
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
 
 // Rate limiting
 const limiter = rateLimit({
