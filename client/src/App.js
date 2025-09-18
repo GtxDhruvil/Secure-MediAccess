@@ -9,6 +9,9 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
 import ParallaxStars from './components/ParallaxStars';
+import DoctorDashboard from './components/dashboard/DoctorDashboard';
+import PatientDashboard from './components/dashboard/PatientDashboard';
+
 
 // Create a client
 const queryClient = new QueryClient({
@@ -65,15 +68,26 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               
-              {/* Protected routes */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
+        {/* Doctor Dashboard */}
+        <Route 
+          path="/doctor/dashboard" 
+          element={
+            <ProtectedRoute>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Patient Dashboard */}
+        <Route 
+          path="/patient/dashboard" 
+            element={
+              <ProtectedRoute>
+                <PatientDashboard />
+              </ProtectedRoute>
+            } 
+        />
+
               
               {/* Redirect unknown routes to home */}
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 // Create axios instance
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -42,8 +42,10 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
-          const response = await axios.post('/api/auth/refresh-token', {
-            refreshToken
+          // const response = await axios.post('/api/auth/refresh-token', {
+          //   refreshToken
+          const response = await api.post(endpoints.auth.refreshToken, {
+                refreshToken
           });
           
           const newToken = response.data.token;

@@ -123,33 +123,59 @@ export const AuthProvider = ({ children }) => {
   }, [state.token, state.user, navigate]);
 
   // Login function
-  const login = async (credentials) => {
-    dispatch({ type: AUTH_ACTIONS.LOGIN_START });
+  // const login = async (credentials) => {
+  //   dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     
-    try {
-      const response = await api.post('/api/auth/login', credentials);
+  //   try {
+  //     const response = await api.post('/api/auth/login', credentials);
       
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: response.data
-      });
+  //     dispatch({
+  //       type: AUTH_ACTIONS.LOGIN_SUCCESS,
+  //       payload: response.data
+  //     });
 
-      // Redirect to dashboard; it will route by role
-      navigate('/dashboard');
+  //     // Redirect to dashboard; it will route by role
+  //     navigate('/dashboard');
 
-      toast.success('Login successful!');
+  //     toast.success('Login successful!');
       
-    } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Login failed';
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_FAILURE,
-        payload: errorMessage
-      });
+  //   } catch (error) {
+  //     const errorMessage = error.response?.data?.error || 'Login failed';
+  //     dispatch({
+  //       type: AUTH_ACTIONS.LOGIN_FAILURE,
+  //       payload: errorMessage
+  //     });
       
-      toast.error(errorMessage);
-      throw error;
-    }
-  };
+  //     toast.error(errorMessage);
+  //     throw error;
+  //   }
+  // };
+  // Login function
+const login = async (credentials) => {
+  dispatch({ type: AUTH_ACTIONS.LOGIN_START });
+
+  try {
+    const response = await api.post('/api/auth/login', credentials);
+
+    dispatch({
+      type: AUTH_ACTIONS.LOGIN_SUCCESS,
+      payload: response.data
+    });
+
+    // 👉 Just return response data
+    return response.data;
+
+  } catch (error) {
+    const errorMessage = error.response?.data?.error || 'Login failed';
+    dispatch({
+      type: AUTH_ACTIONS.LOGIN_FAILURE,
+      payload: errorMessage
+    });
+
+    throw error;
+  }
+};
+
 
   // Register function
   const register = async (userData) => {

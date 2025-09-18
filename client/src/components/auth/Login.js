@@ -17,16 +17,44 @@ const Login = () => {
     formState: { errors }
   } = useForm();
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      await login({ email: data.email, password: data.password });
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
-    } finally {
-      setLoading(false);
+  // const onSubmit = async (data) => {
+  //   setLoading(true);
+  //   try {
+  //     await login({ email: data.email, password: data.password });
+  //   } catch (error) {
+  //     toast.error(error.response?.data?.message || 'Login failed');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+ const onSubmit = async (data) => {
+  setLoading(true);
+  try {
+    const response = await login({ email: data.email, password: data.password });
+
+    // Save tokens
+    localStorage.setItem("token", response.token);
+    if (response.refreshToken) {
+      localStorage.setItem("refreshToken", response.refreshToken);
     }
-  };
+
+    // Redirect by role
+    if (response.user?.role === "doctor") {
+      navigate("/doctor/dashboard");
+    } else if (response.user?.role === "patient") {
+      navigate("/patient/dashboard");
+    } else {
+      navigate("/");
+    }
+
+    toast.success("Login successful!");
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-transparent flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

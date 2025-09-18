@@ -149,15 +149,40 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 // Start server
+// const startServer = async () => {
+//   try {
+//     // Test database connection
+//     await sequelize.authenticate();
+//     logger.info('Database connection established successfully.');
+
+//     // Sync database models
+//     await sequelize.sync({ alter: true });
+//     logger.info('Database models synchronized.');
+
+//     // Start server
+//     app.listen(PORT, () => {
+//       logger.info(`Server running on port ${PORT}`);
+//       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+//     });
+//   } catch (error) {
+//     logger.error('Failed to start server:', error);
+//     process.exit(1);
+//   }
+// };
 const startServer = async () => {
   try {
     // Test database connection
     await sequelize.authenticate();
     logger.info('Database connection established successfully.');
 
-    // Sync database models
-    await sequelize.sync({ alter: true });
-    logger.info('Database models synchronized.');
+    // Only sync in development
+    // Only sync in development
+  if (process.env.NODE_ENV !== 'production') {
+    await sequelize.sync({ alter: true }); // adjust tables automatically in dev
+    logger.info('Database models synchronized (development mode).');
+  } else {
+    logger.info('Production mode: skipping Sequelize sync.');
+  }
 
     // Start server
     app.listen(PORT, () => {
@@ -169,6 +194,7 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
