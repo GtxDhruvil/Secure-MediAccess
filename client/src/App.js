@@ -23,7 +23,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [theme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
     const root = document.documentElement;

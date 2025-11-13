@@ -26,13 +26,27 @@ const PORT = process.env.PORT || 5000;
 const { sequelize } = require('./config/database');
 
 const allowedOrigins = [
-  process.env.CLIENT_URL,       // deployed frontend
-  'http://localhost:3000'       // local dev
-];
+  process.env.CLIENT_URL,       // deployed frontend (from env)
+  process.env.CLIENT_URL_FALLBACK,
+  'https://secure-medi-access.vercel.app',
+  'https://secure-mediaccess.vercel.app',
+  'http://localhost:3000'
+].filter(Boolean);
+
+const isAllowedOrigin = (origin = '') => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const url = new URL(origin);
+    return url.hostname.endsWith('.vercel.app') && origin.startsWith('https://');
+  } catch (err) {
+    return false;
+  }
+};
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
