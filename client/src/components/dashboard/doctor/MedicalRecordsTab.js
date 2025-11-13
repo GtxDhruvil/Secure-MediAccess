@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Filter, Search, PlusCircle, Eye, Download, Trash2 } from 'lucide-react';
+import { Filter, PlusCircle, Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const MedicalRecordsTab = ({ medicalRecords, setIsCreateRecordModalOpen, handleDeleteRecord, handleRequestAccess }) => {

@@ -7,7 +7,6 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Home from './components/Home';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
-import Dashboard from './components/dashboard/Dashboard';
 import ParallaxStars from './components/ParallaxStars';
 import DoctorDashboard from './components/dashboard/DoctorDashboard';
 import PatientDashboard from './components/dashboard/PatientDashboard';
@@ -52,8 +51,6 @@ function App() {
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [theme]);
-
-  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   return (
     <QueryClientProvider client={queryClient}>

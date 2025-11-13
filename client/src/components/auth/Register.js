@@ -168,7 +168,7 @@ const Register = () => {
               <label htmlFor="phoneNumber" className={labelClasses}>Phone Number</label>
               <div className="mt-1 relative">
                 <Phone className={iconClasses} />
-                <input {...register('phoneNumber', { required: 'Phone number is required', pattern: { value: /^[\+]?[1-9][\d]{0,15}$/, message: 'Invalid phone number' }})} type="tel" className={inputClasses} placeholder="+1234567890" />
+                <input {...register('phoneNumber', { required: 'Phone number is required', pattern: { value: /^[+]?[1-9][\d]{0,15}$/, message: 'Invalid phone number' }})} type="tel" className={inputClasses} placeholder="+1234567890" />
               </div>
               {errors.phoneNumber && <p className="mt-1 text-sm text-red-500">{errors.phoneNumber.message}</p>}
             </div>
@@ -275,3 +275,6 @@ const Register = () => {
 };
 
 export default Register;
+
+
+

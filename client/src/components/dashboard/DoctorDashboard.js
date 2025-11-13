@@ -7,22 +7,15 @@ import {
   FileText, 
   BarChart3, 
   Bell, 
-  Calendar,
-  Plus,
-  Search,
-  Filter,
-  Eye,
   Clock,
-  CheckCircle,
   XCircle,
   AlertTriangle,
-  UserPlus,
   Settings
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Legend, Cell } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Legend, Cell } from 'recharts';
 import PatientsTab from './doctor/PatientsTab';
 import MedicalRecordsTab from './doctor/MedicalRecordsTab';
 import AccessRequestsTab from './doctor/AccessRequestsTab';
@@ -113,23 +106,6 @@ const DoctorDashboard = () => {
     }
   };
 
-  const requestAccess = async (patientId, recordType, reason) => {
-    try {
-      // Backend expects specific enums for requestType/urgency
-      const payload = {
-        patientId,
-        requestType: 'view_records',
-        reason: reason && reason.length >= 10 ? reason : 'Routine checkup request',
-        urgency: 'routine'
-      };
-      await api.post('/api/otp/request-access', payload);
-      toast.success('Access request sent successfully');
-      fetchDashboardData();
-    } catch (error) {
-      const msg = error.response?.data?.error || 'Failed to send access request';
-      toast.error(msg);
-    }
-  };
 
   const viewApprovedRecord = async (requestId, patientId) => {
     try {
@@ -209,7 +185,7 @@ const DoctorDashboard = () => {
 
   const handleProfileUpdate = async (formData) => {
     try {
-      const { data } = await api.put('/api/doctor/profile', formData);
+      await api.put('/api/doctor/profile', formData);
       toast.success('Profile updated successfully');
       // NOTE: We don't have a setUser in AuthContext, so a page refresh might be needed for avatar/name changes
       // For now, we can update the user state locally if needed, but the token won't reflect it.
@@ -479,13 +455,6 @@ const DoctorDashboard = () => {
     );
   };
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'patients', label: 'Patients', icon: Users },
-    { id: 'medical-records', label: 'Medical Records', icon: FileText },
-    { id: 'access-requests', label: 'Access Requests', icon: Clock },
-    { id: 'settings', label: 'Settings', icon: Settings }
-  ];
 
   if (loading) {
     return (
@@ -637,7 +606,7 @@ const DoctorDashboard = () => {
   if (!newPatient.firstName || newPatient.firstName.length < 2) errs.firstName = 'First name required (min 2)';
   if (!newPatient.lastName || newPatient.lastName.length < 2) errs.lastName = 'Last name required (min 2)';
   if (!newPatient.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newPatient.email)) errs.email = 'Valid email required';
-  if (!newPatient.phoneNumber || !/^\+?[\d\s\-\(\)]+$/.test(newPatient.phoneNumber)) errs.phoneNumber = 'Valid phone required';
+  if (!newPatient.phoneNumber || !/^[+]?[\d\s\-()]+$/.test(newPatient.phoneNumber)) errs.phoneNumber = 'Valid phone required';
   if (!newPatient.dateOfBirth) errs.dateOfBirth = 'Date of birth required';
   if (!newPatient.gender) errs.gender = 'Gender required';
   setFormErrors(errs);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
 const AccessRequestsTab = ({ accessRequests, handleApprove, handleDeny, viewApprovedRecord, viewedRequests }) => {

@@ -10,12 +10,8 @@ import {
   Calendar,
   Download,
   Eye,
-  Lock,
   Unlock,
-  Clock,
-  AlertTriangle,
-  CheckCircle,
-  XCircle
+  Clock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -64,6 +60,7 @@ const PatientDashboard = () => {
     if (isAuthenticated && user) {
       fetchDashboardData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user]);
 
   // Show login message if not authenticated
