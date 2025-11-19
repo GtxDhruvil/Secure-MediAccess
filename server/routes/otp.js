@@ -82,11 +82,22 @@ router.post('/request-access',
       });
 
       if (pendingRequest) {
-        return res.status(409).json({
-          error: 'Access request already pending',
-          code: 'REQUEST_ALREADY_PENDING',
+        const refreshedRequest = await otpService.resendOTP(pendingRequest.id, patientId);
+
+        await AuditLog.logAccessRequest(
+          doctorId,
+          patientId,
+          pendingRequest.id,
+          'pending'
+        );
+
+        return res.status(200).json({
+          message: 'Access request already pending. A new OTP has been sent to the patient.',
+          code: 'REQUEST_PENDING_OTP_RESENT',
           requestId: pendingRequest.id,
-          otpExpiry: pendingRequest.otpExpiry
+          patientName: patient.getFullName(),
+          otpExpiry: refreshedRequest.otpExpiry,
+          wasResent: true
         });
       }
 

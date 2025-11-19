@@ -160,43 +160,40 @@ router.post('/login', validateLogin, async (req, res) => {
       // Increment failed login attempts
       await user.incrementFailedLoginAttempts();
       
-      // Log failed login attempt
-      await AuditLog.logLogin(
+      // Log failed login attempt without blocking response
+      AuditLog.logLogin(
         user.id,
         req.ip,
         req.get('User-Agent'),
         req.sessionID,
         'failure'
-      );
+      ).catch(err => logger.error('Failed to log unsuccessful login', err));
 
       return res.status(401).json({
         error: 'Invalid credentials',
         code: 'INVALID_CREDENTIALS',
-        remainingAttempts: 5 - user.failedLoginAttempts
+        remainingAttempts: Math.max(0, 5 - user.failedLoginAttempts)
       });
     }
 
-    // Reset failed login attempts on successful login
-    await user.resetFailedLoginAttempts();
-    
-    // Update last login
-    await user.updateLastLogin();
+    // Reset failed login attempts and update last login in a single query
+    await user.update({
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      lastLoginAt: new Date()
+    });
 
     // Generate token
     const token = generateToken(user.id, user.role);
 
-    // Set session
-    req.session.userId = user.id;
-    req.session.role = user.role;
-
-    // Log successful login
-    await AuditLog.logLogin(
+    // Log successful login asynchronously to avoid slowing down the response
+    AuditLog.logLogin(
       user.id,
       req.ip,
       req.get('User-Agent'),
       req.sessionID,
       'success'
-    );
+    ).catch(err => logger.error('Failed to log successful login', err));
 
     // Remove password from response
     const userResponse = user.toJSON();
@@ -232,12 +229,14 @@ router.post('/logout', authenticateToken, async (req, res) => {
       'low'
     );
 
-    // Destroy session
-    req.session.destroy((err) => {
-      if (err) {
-        logger.error('Session destruction error:', err);
-      }
-    });
+    // Destroy session if one exists (JWT handles auth but sessions are optional)
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          logger.error('Session destruction error:', err);
+        }
+      });
+    }
 
     res.json({
       message: 'Logout successful'
