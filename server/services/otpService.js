@@ -1,30 +1,37 @@
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { Resend } = require('resend');
 const { User, AccessRequest, AuditLog } = require('../models');
 const { logger } = require('../utils/logger');
 
 class OTPService {
   constructor() {
+    this.resendClient = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+    this.emailTransporter = null;
     this.emailEnabled = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
     this.emailSendTimeout = parseInt(process.env.EMAIL_SEND_TIMEOUT, 10) || 10000;
 
-    if (this.emailEnabled) {
+    if (this.resendClient) {
+      logger.info('OTP email provider initialised with Resend.');
+    } else if (this.emailEnabled) {
       // Initialize email transporter when credentials are configured
       this.emailTransporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST || 'smtp.gmail.com',
         port: process.env.EMAIL_PORT || 587,
-        secure: false,
+        secure: process.env.EMAIL_SECURE === 'true',
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
         },
         pool: true,
         connectionTimeout: this.emailSendTimeout,
-        socketTimeout: this.emailSendTimeout
+        socketTimeout: this.emailSendTimeout,
+        greetingTimeout: this.emailSendTimeout
       });
+      logger.info('OTP email provider initialised with SMTP transporter.');
     } else {
       this.emailTransporter = null;
-      logger.warn('Email credentials not configured. OTP codes will be logged to console in development mode.');
+      logger.warn('No email provider configured. OTP codes will be logged to console in development mode.');
     }
 
     // OTP configuration
@@ -40,6 +47,28 @@ class OTPService {
   // Send OTP via email
   async sendOTPEmail(email, otp, purpose = 'access') {
     try {
+      if (this.resendClient) {
+        const fromAddress = process.env.EMAIL_FROM || 'Secure Medi Access <no-reply@securemediaccess.com>';
+        const { data, error } = await this.resendClient.emails.send({
+          from: fromAddress,
+          to: email,
+          subject,
+          html
+        });
+
+        if (error) {
+          throw new Error(error.message || 'Resend delivery error');
+        }
+
+        logger.info('OTP email sent successfully via Resend', {
+          email,
+          purpose,
+          messageId: data?.id
+        });
+
+        return true;
+      }
+
       if (!this.emailEnabled || !this.emailTransporter) {
         logger.info('Email service disabled. OTP logged for development use.', {
           email,
