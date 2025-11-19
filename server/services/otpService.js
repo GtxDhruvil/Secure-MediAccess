@@ -211,7 +211,10 @@ class OTPService {
         requestType
       });
 
-      return accessRequest;
+      return {
+        accessRequest,
+        otp: (process.env.NODE_ENV !== 'production' || process.env.OTP_DEBUG === 'true') ? otp : null
+      };
     } catch (error) {
       logger.error('Failed to create access request', {
         doctorId,
@@ -346,7 +349,10 @@ class OTPService {
         patientId
       });
 
-      return accessRequest;
+      return {
+        accessRequest,
+        otp: (process.env.NODE_ENV !== 'production' || process.env.OTP_DEBUG === 'true') ? otp : null
+      };
     } catch (error) {
       logger.error('Failed to resend OTP', {
         requestId,

@@ -82,7 +82,7 @@ router.post('/request-access',
       });
 
       if (pendingRequest) {
-        const refreshedRequest = await otpService.resendOTP(pendingRequest.id, patientId);
+        const { accessRequest: refreshedRequest, otp: debugOtp } = await otpService.resendOTP(pendingRequest.id, patientId);
 
         await AuditLog.logAccessRequest(
           doctorId,
@@ -91,18 +91,24 @@ router.post('/request-access',
           'pending'
         );
 
-        return res.status(200).json({
+        const responsePayload = {
           message: 'Access request already pending. A new OTP has been sent to the patient.',
           code: 'REQUEST_PENDING_OTP_RESENT',
           requestId: pendingRequest.id,
           patientName: patient.getFullName(),
           otpExpiry: refreshedRequest.otpExpiry,
           wasResent: true
-        });
+        };
+
+        if (debugOtp) {
+          responsePayload.debugOtp = debugOtp;
+        }
+
+        return res.status(200).json(responsePayload);
       }
 
       // Create access request with OTP
-      const accessRequest = await otpService.createAccessRequest(doctorId, patientId, {
+      const { accessRequest, otp: debugOtp } = await otpService.createAccessRequest(doctorId, patientId, {
         requestType,
         reason,
         urgency,
@@ -119,13 +125,19 @@ router.post('/request-access',
         'success'
       );
 
-      res.status(201).json({
+      const responsePayload = {
         message: 'Access request sent successfully. Patient will receive OTP for verification.',
         requestId: accessRequest.id,
         patientName: patient.getFullName(),
         otpExpiry: accessRequest.otpExpiry,
         estimatedDeliveryTime: '1-2 minutes'
-      });
+      };
+
+      if (debugOtp) {
+        responsePayload.debugOtp = debugOtp;
+      }
+
+      res.status(201).json(responsePayload);
 
     } catch (error) {
       logger.error('Access request error:', error);
