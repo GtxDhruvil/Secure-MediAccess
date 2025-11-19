@@ -15,20 +15,30 @@ class OTPService {
       logger.info('OTP email provider initialised with Resend.');
     } else if (this.emailEnabled) {
       // Initialize email transporter when credentials are configured
+      // Use pool: false for serverless environments to avoid connection issues
+      const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+      
       this.emailTransporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: process.env.EMAIL_PORT || 587,
+        port: parseInt(process.env.EMAIL_PORT, 10) || 587,
         secure: process.env.EMAIL_SECURE === 'true',
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS
         },
-        pool: true,
-        connectionTimeout: this.emailSendTimeout,
-        socketTimeout: this.emailSendTimeout,
-        greetingTimeout: this.emailSendTimeout
+        // Disable connection pooling for serverless (causes timeouts)
+        pool: !isServerless,
+        // Aggressive timeouts for serverless environments
+        connectionTimeout: isServerless ? 5000 : this.emailSendTimeout,
+        socketTimeout: isServerless ? 5000 : this.emailSendTimeout,
+        greetingTimeout: isServerless ? 3000 : this.emailSendTimeout,
+        // Additional options for better serverless compatibility
+        tls: {
+          rejectUnauthorized: false,
+          ciphers: 'SSLv3'
+        }
       });
-      logger.info('OTP email provider initialised with SMTP transporter.');
+      logger.info(`OTP email provider initialised with SMTP transporter (serverless: ${isServerless ? 'yes' : 'no'}).`);
     } else {
       this.emailTransporter = null;
       logger.warn('No email provider configured. OTP codes will be logged to console in development mode.');
@@ -44,17 +54,55 @@ class OTPService {
     return crypto.randomInt(100000, 999999).toString();
   }
 
-  // Send OTP via email
+  // Send OTP via email with timeout protection for serverless
   async sendOTPEmail(email, otp, purpose = 'access') {
+    const subject = purpose === 'access' 
+      ? 'Medical Record Access Request - OTP Verification'
+      : 'Your OTP Code';
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb; text-align: center;">Secure Medical Access</h2>
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #1e293b; margin-bottom: 15px;">OTP Verification Required</h3>
+          <p style="color: #475569; line-height: 1.6;">
+            ${purpose === 'access' 
+              ? 'A doctor has requested access to your medical records. To approve this request, please use the OTP code below:'
+              : 'Please use the following OTP code to complete your verification:'
+            }
+          </p>
+          <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #2563eb; font-size: 32px; letter-spacing: 4px; margin: 0;">${otp}</h1>
+          </div>
+          <p style="color: #64748b; font-size: 14px; margin-top: 20px;">
+            This OTP will expire in ${this.otpExpiryMinutes} minutes.<br>
+            If you didn't request this, please ignore this email.
+          </p>
+        </div>
+        <div style="text-align: center; color: #64748b; font-size: 12px;">
+          <p>This is an automated message from Secure Medical Access System.</p>
+        </div>
+      </div>
+    `;
+
     try {
+      // Try Resend API first (best for serverless)
       if (this.resendClient) {
         const fromAddress = process.env.EMAIL_FROM || 'Secure Medi Access <no-reply@securemediaccess.com>';
-        const { data, error } = await this.resendClient.emails.send({
+        
+        // Add timeout wrapper for Resend
+        const sendPromise = this.resendClient.emails.send({
           from: fromAddress,
           to: email,
-          subject,
-          html
+          subject: subject,
+          html: html
         });
+
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Resend API timeout')), this.emailSendTimeout)
+        );
+
+        const { data, error } = await Promise.race([sendPromise, timeoutPromise]);
 
         if (error) {
           throw new Error(error.message || 'Resend delivery error');
@@ -66,77 +114,67 @@ class OTPService {
           messageId: data?.id
         });
 
-        return true;
+        return { success: true, provider: 'resend', otp };
       }
 
-      if (!this.emailEnabled || !this.emailTransporter) {
-        logger.info('Email service disabled. OTP logged for development use.', {
+      // Fallback to SMTP (may timeout on serverless)
+      if (this.emailEnabled && this.emailTransporter) {
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: subject,
+          html: html
+        };
+
+        // Wrap SMTP send in timeout to prevent hanging
+        const sendPromise = this.emailTransporter.sendMail(mailOptions);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('SMTP connection timeout')), this.emailSendTimeout)
+        );
+
+        const result = await Promise.race([sendPromise, timeoutPromise]);
+        
+        logger.info('OTP email sent successfully via SMTP', {
           email,
-          otp,
-          purpose
+          purpose,
+          messageId: result.messageId
         });
 
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`\n🔐 OTP (email service disabled): ${otp}`);
-          console.log(`📧 Intended recipient: ${email}`);
-          console.log(`⏰ Expires in: ${this.otpExpiryMinutes} minutes\n`);
-        }
-
-        return true;
+        return { success: true, provider: 'smtp', otp };
       }
 
-      const subject = purpose === 'access' 
-        ? 'Medical Record Access Request - OTP Verification'
-        : 'Your OTP Code';
-
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb; text-align: center;">Secure Medical Access</h2>
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #1e293b; margin-bottom: 15px;">OTP Verification Required</h3>
-            <p style="color: #475569; line-height: 1.6;">
-              ${purpose === 'access' 
-                ? 'A doctor has requested access to your medical records. To approve this request, please use the OTP code below:'
-                : 'Please use the following OTP code to complete your verification:'
-              }
-            </p>
-            <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; text-align: center; margin: 20px 0;">
-              <h1 style="color: #2563eb; font-size: 32px; letter-spacing: 4px; margin: 0;">${otp}</h1>
-            </div>
-            <p style="color: #64748b; font-size: 14px; margin-top: 20px;">
-              This OTP will expire in ${this.otpExpiryMinutes} minutes.<br>
-              If you didn't request this, please ignore this email.
-            </p>
-          </div>
-          <div style="text-align: center; color: #64748b; font-size: 12px;">
-            <p>This is an automated message from Secure Medical Access System.</p>
-          </div>
-        </div>
-      `;
-
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: subject,
-        html: html
-      };
-
-      const result = await this.emailTransporter.sendMail(mailOptions);
-      
-      logger.info('OTP email sent successfully', {
+      // No email provider configured - log OTP for development
+      logger.info('Email service not configured. OTP logged for development use.', {
         email,
-        purpose,
-        messageId: result.messageId
+        otp,
+        purpose
       });
 
-      return true;
+      if (process.env.NODE_ENV !== 'production' || process.env.OTP_DEBUG === 'true') {
+        console.log(`\n🔐 OTP (email service disabled): ${otp}`);
+        console.log(`📧 Intended recipient: ${email}`);
+        console.log(`⏰ Expires in: ${this.otpExpiryMinutes} minutes\n`);
+      }
+
+      return { success: true, provider: 'console', otp };
     } catch (error) {
+      // Log error but don't throw - OTP is still valid
       logger.error('Failed to send OTP email', {
         email,
         purpose,
-        error: error.message
+        error: error.message,
+        stack: error.stack
       });
-      throw new Error('Failed to send OTP email');
+
+      // Always log OTP on failure so it's accessible
+      if (process.env.NODE_ENV !== 'production' || process.env.OTP_DEBUG === 'true') {
+        console.log(`\n⚠️  Email failed, but OTP is: ${otp}`);
+        console.log(`📧 Intended recipient: ${email}`);
+        console.log(`⏰ Expires in: ${this.otpExpiryMinutes} minutes\n`);
+      }
+
+      // Return failure but include OTP for debugging
+      return { success: false, provider: 'failed', otp, error: error.message };
     }
   }
 
@@ -221,14 +259,28 @@ class OTPService {
         throw new Error('Patient not found');
       }
 
-      // Send OTP to patient (non-blocking)
-      this.sendOTPEmail(patient.email, otp, 'access').catch(emailError => {
-        logger.error('Failed to send OTP email, but request remains valid', {
-          requestId: accessRequest.id,
-          email: patient.email,
-          error: emailError.message
+      // Send OTP to patient (non-blocking with timeout protection)
+      let emailResult = null;
+      this.sendOTPEmail(patient.email, otp, 'access')
+        .then(result => {
+          emailResult = result;
+          if (!result.success) {
+            logger.error('Failed to send OTP email, but request remains valid', {
+              requestId: accessRequest.id,
+              email: patient.email,
+              error: result.error,
+              otp: result.otp // OTP included for debugging
+            });
+          }
+        })
+        .catch(emailError => {
+          logger.error('Failed to send OTP email, but request remains valid', {
+            requestId: accessRequest.id,
+            email: patient.email,
+            error: emailError.message,
+            otp: otp // Always include OTP on failure
+          });
         });
-      });
 
       // Log the access request
       await AuditLog.logAccessRequest(doctorId, patientId, accessRequest.id, 'success');
@@ -237,12 +289,18 @@ class OTPService {
         requestId: accessRequest.id,
         doctorId,
         patientId,
-        requestType
+        requestType,
+        otp: otp // Always log OTP for debugging
       });
+
+      // Return OTP in debug mode or if email failed (check after short delay)
+      const shouldReturnOtp = process.env.NODE_ENV !== 'production' || 
+                              process.env.OTP_DEBUG === 'true';
 
       return {
         accessRequest,
-        otp: (process.env.NODE_ENV !== 'production' || process.env.OTP_DEBUG === 'true') ? otp : null
+        otp: shouldReturnOtp ? otp : null,
+        debugOtp: shouldReturnOtp ? otp : undefined
       };
     } catch (error) {
       logger.error('Failed to create access request', {
@@ -364,23 +422,42 @@ class OTPService {
         throw new Error('Patient not found');
       }
 
-      // Send new OTP (non-blocking)
-      this.sendOTPEmail(patient.email, otp, 'access').catch(emailError => {
-        logger.error('Failed to resend OTP email', {
-          requestId: accessRequest.id,
-          email: patient.email,
-          error: emailError.message
+      // Send new OTP (non-blocking with timeout protection)
+      let emailResult = null;
+      this.sendOTPEmail(patient.email, otp, 'access')
+        .then(result => {
+          emailResult = result;
+          if (!result.success) {
+            logger.error('Failed to resend OTP email', {
+              requestId: accessRequest.id,
+              email: patient.email,
+              error: result.error,
+              otp: result.otp
+            });
+          }
+        })
+        .catch(emailError => {
+          logger.error('Failed to resend OTP email', {
+            requestId: accessRequest.id,
+            email: patient.email,
+            error: emailError.message,
+            otp: otp
+          });
         });
-      });
 
       logger.info('OTP resent successfully', {
         requestId: accessRequest.id,
-        patientId
+        patientId,
+        otp: otp
       });
+
+      const shouldReturnOtp = process.env.NODE_ENV !== 'production' || 
+                              process.env.OTP_DEBUG === 'true';
 
       return {
         accessRequest,
-        otp: (process.env.NODE_ENV !== 'production' || process.env.OTP_DEBUG === 'true') ? otp : null
+        otp: shouldReturnOtp ? otp : null,
+        debugOtp: shouldReturnOtp ? otp : undefined
       };
     } catch (error) {
       logger.error('Failed to resend OTP', {

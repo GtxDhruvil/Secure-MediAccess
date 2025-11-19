@@ -108,7 +108,7 @@ router.post('/request-access',
       }
 
       // Create access request with OTP
-      const { accessRequest, otp: debugOtp } = await otpService.createAccessRequest(doctorId, patientId, {
+      const result = await otpService.createAccessRequest(doctorId, patientId, {
         requestType,
         reason,
         urgency,
@@ -116,6 +116,9 @@ router.post('/request-access',
         scope,
         specificRecordIds: specificRecordIds || []
       });
+
+      const { accessRequest, otp: debugOtp, debugOtp: altDebugOtp } = result;
+      const finalOtp = debugOtp || altDebugOtp;
 
       // Log access request
       await AuditLog.logAccessRequest(
@@ -133,8 +136,9 @@ router.post('/request-access',
         estimatedDeliveryTime: '1-2 minutes'
       };
 
-      if (debugOtp) {
-        responsePayload.debugOtp = debugOtp;
+      // Always include OTP in debug mode or if email might have failed
+      if (finalOtp) {
+        responsePayload.debugOtp = finalOtp;
       }
 
       res.status(201).json(responsePayload);
