@@ -5,20 +5,31 @@ const { logger } = require('../utils/logger');
 
 class OTPService {
   constructor() {
-    // Initialize email transporter
-    this.emailTransporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
+    this.emailEnabled = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+    this.emailSendTimeout = parseInt(process.env.EMAIL_SEND_TIMEOUT, 10) || 10000;
+
+    if (this.emailEnabled) {
+      // Initialize email transporter when credentials are configured
+      this.emailTransporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: process.env.EMAIL_PORT || 587,
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        },
+        pool: true,
+        connectionTimeout: this.emailSendTimeout,
+        socketTimeout: this.emailSendTimeout
+      });
+    } else {
+      this.emailTransporter = null;
+      logger.warn('Email credentials not configured. OTP codes will be logged to console in development mode.');
+    }
 
     // OTP configuration
-    this.otpLength = parseInt(process.env.OTP_LENGTH) || 6;
-    this.otpExpiryMinutes = parseInt(process.env.OTP_EXPIRY_MINUTES) || 10;
+    this.otpLength = parseInt(process.env.OTP_LENGTH, 10) || 6;
+    this.otpExpiryMinutes = parseInt(process.env.OTP_EXPIRY_MINUTES, 10) || 10;
   }
 
   // Generate OTP
@@ -29,6 +40,22 @@ class OTPService {
   // Send OTP via email
   async sendOTPEmail(email, otp, purpose = 'access') {
     try {
+      if (!this.emailEnabled || !this.emailTransporter) {
+        logger.info('Email service disabled. OTP logged for development use.', {
+          email,
+          otp,
+          purpose
+        });
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`\n🔐 OTP (email service disabled): ${otp}`);
+          console.log(`📧 Intended recipient: ${email}`);
+          console.log(`⏰ Expires in: ${this.otpExpiryMinutes} minutes\n`);
+        }
+
+        return true;
+      }
+
       const subject = purpose === 'access' 
         ? 'Medical Record Access Request - OTP Verification'
         : 'Your OTP Code';
@@ -165,24 +192,14 @@ class OTPService {
         throw new Error('Patient not found');
       }
 
-      // Send OTP to patient
-      try {
-        await this.sendOTPEmail(patient.email, otp, 'access');
-      } catch (emailError) {
-        // Log email error but don't fail the request creation
-        logger.error('Failed to send OTP email, but request created', {
+      // Send OTP to patient (non-blocking)
+      this.sendOTPEmail(patient.email, otp, 'access').catch(emailError => {
+        logger.error('Failed to send OTP email, but request remains valid', {
           requestId: accessRequest.id,
           email: patient.email,
           error: emailError.message
         });
-        
-        // For development, log the OTP to console
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`\n🔐 OTP for development: ${otp}`);
-          console.log(`📧 Patient email: ${patient.email}`);
-          console.log(`⏰ Expires at: ${accessRequest.otpExpiry}\n`);
-        }
-      }
+      });
 
       // Log the access request
       await AuditLog.logAccessRequest(doctorId, patientId, accessRequest.id, 'success');
@@ -315,8 +332,14 @@ class OTPService {
         throw new Error('Patient not found');
       }
 
-      // Send new OTP
-      await this.sendOTPEmail(patient.email, otp, 'access');
+      // Send new OTP (non-blocking)
+      this.sendOTPEmail(patient.email, otp, 'access').catch(emailError => {
+        logger.error('Failed to resend OTP email', {
+          requestId: accessRequest.id,
+          email: patient.email,
+          error: emailError.message
+        });
+      });
 
       logger.info('OTP resent successfully', {
         requestId: accessRequest.id,
